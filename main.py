@@ -1,8 +1,5 @@
-from datasets import load_dataset, concatenate_datasets
 import torch
 import os
-import transformers
-
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -10,11 +7,9 @@ from transformers import (
     Trainer,
     DataCollatorForLanguageModeling
 )
-
-print("GPU is", "available" if torch.cuda.is_available() else "not available")
+from datasets import load_dataset, concatenate_datasets, DatasetDict
 
 # Read Hugging Face token from environment variables
-#HF_TOKEN = os.getenv('HF_TOKEN')
 HF_TOKEN = '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'
 
 if HF_TOKEN is None:
@@ -31,7 +26,7 @@ model = AutoModelForCausalLM.from_pretrained(
     model_id,
     torch_dtype=torch.float16,  # Use float16 since RTX 3090 does not support bfloat16
     device_map="auto",
-    use_auth_token=HF_TOKEN
+    token=HF_TOKEN
 )
 
 # 2. Load the datasets
@@ -84,13 +79,22 @@ tokenized_datasets.set_format(
     columns=['input_ids', 'attention_mask']
 )
 
-# 6. Set up the data collator for Language Modeling
+# 6. Split the dataset into train and validation sets
+# Here, we split 10% of the training data for validation
+split_ratio = 0.3
+tokenized_datasets = tokenized_datasets["train"].train_test_split(test_size=split_ratio, seed=42)
+tokenized_datasets = DatasetDict({
+    "train": tokenized_datasets["train"],
+    "validation": tokenized_datasets["test"]
+})
+
+# 7. Set up the data collator for Language Modeling
 data_collator = DataCollatorForLanguageModeling(
     tokenizer=tokenizer,
     mlm=False  # No masking for Causal Language Modeling
 )
 
-# 7. Set up training arguments
+# 8. Set up training arguments
 training_args = TrainingArguments(
     output_dir="./fine-tuned-llama3B-lawqa",
     overwrite_output_dir=True,
@@ -106,19 +110,20 @@ training_args = TrainingArguments(
     logging_steps=10,
 )
 
-# 8. Initialize the Trainer
+# 9. Initialize the Trainer
 trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=tokenized_datasets["train"],
-    eval_dataset=tokenized_datasets.get("validation"),
+    eval_dataset=tokenized_datasets["validation"],
     tokenizer=tokenizer,
     data_collator=data_collator,
 )
 
-# 9. Fine-tune the model
+# 10. Fine-tune the model
 trainer.train()
 
-# 10. Save the fine-tuned model
+# 11. Save the fine-tuned model
 trainer.save_model("./fine-tuned-llama3B-lawqa")
 tokenizer.save_pretrained("./fine-tuned-llama3B-lawqa")
+
