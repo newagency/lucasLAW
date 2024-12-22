@@ -19,7 +19,7 @@ if HF_TOKEN is None:
 model_id = 'Bllossom/llama-3.2-Korean-Bllossom-3B'
 
 # Load the tokenizer
-tokenizer = AutoTokenizer.from_pretrained(model_id, use_auth_token=HF_TOKEN)
+tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 # Load the model
 model = AutoModelForCausalLM.from_pretrained(
@@ -30,8 +30,8 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 
 # 2. Load the datasets
-dataset1 = load_dataset("jihye-moon/LawQA-Ko", use_auth_token=HF_TOKEN)
-dataset2 = load_dataset("zzunyang/LawQA_LawSee", use_auth_token=HF_TOKEN)
+dataset1 = load_dataset("jihye-moon/LawQA-Ko")
+dataset2 = load_dataset("zzunyang/LawQA_LawSee")
 
 # Merge the datasets (for all splits like train, validation, etc.)
 def merge_datasets(ds1, ds2):
